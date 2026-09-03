@@ -38,6 +38,23 @@
     ctx.fillText(str, x, y);
     ctx.restore();
   }
+  /* Greedy word wrap, used by the info panel so long lines fit any width. */
+  function wrapText(ctx, str, maxW, size, weight) {
+    var words = String(str).split(' ');
+    var lines = [], line = '';
+    for (var i = 0; i < words.length; i++) {
+      var test = line ? line + ' ' + words[i] : words[i];
+      if (line && measure(ctx, test, size, weight) > maxW) {
+        lines.push(line);
+        line = words[i];
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
   function measure(ctx, str, size, weight) {
     ctx.save();
     ctx.font = (weight || 'bold') + ' ' + (size || 16) + 'px ' + FONT;
@@ -2332,6 +2349,17 @@
     util.roundRect(ctx, -s * 0.6, -s * 0.16, s * 1.2, s * 0.32, s * 0.1); ctx.fill();
     util.roundRect(ctx, -s * 0.16, -s * 0.6, s * 0.32, s * 1.2, s * 0.1); ctx.fill();
   };
+  icons.info = function (ctx, s, color) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = s * 0.15;
+    circle(ctx, 0, 0, s * 0.78);
+    ctx.stroke();
+    ctx.fillStyle = color;
+    circle(ctx, 0, -s * 0.4, s * 0.13);
+    ctx.fill();
+    util.roundRect(ctx, -s * 0.1, -s * 0.12, s * 0.2, s * 0.62, s * 0.09);
+    ctx.fill();
+  };
   icons.heart = function (ctx, s, color) {
     ctx.fillStyle = color || '#ff6b81';
     ctx.beginPath();
@@ -2424,59 +2452,89 @@
 
   var INK = 'rgba(5,24,38,0.9)';
 
-  /* Pinching hand sprinkling flakes - shown over open water. */
+  /* A little scatter of food - shown over open water. */
   function drawFeedCursor(x) {
-    function limbs(w, color) {
-      x.strokeStyle = color;
-      x.lineWidth = w;
-      x.lineCap = 'round';
-      x.lineJoin = 'round';
-      x.beginPath(); x.moveTo(8, 8); x.lineTo(17, 18); x.stroke();
-      x.beginPath(); x.moveTo(12, 5); x.lineTo(20, 15); x.stroke();
-    }
-    /* outline pass */
-    limbs(8, INK);
+    var pellets = [[14, 10, 4.4], [8.5, 16, 3.4], [19, 17, 3.2]];
+    var flakes = [[19.5, 8.5, 3.4, 0.5], [10, 21.5, 2.9, -0.7]];
+    var i, p, f;
+    /* dark backing so the cluster reads on pale water */
     x.fillStyle = INK;
-    circle(x, 22, 22, 8.5); x.fill();
-    /* fill pass */
-    limbs(4.2, '#ffffff');
-    x.fillStyle = '#f4fbff';
-    circle(x, 22, 22, 6.4); x.fill();
-    /* flakes falling from the pinch */
-    var flakes = [[4, 15, 2.2], [8, 20, 1.8], [3, 24, 1.5]];
-    for (var i = 0; i < flakes.length; i++) {
-      x.fillStyle = INK;
-      circle(x, flakes[i][0], flakes[i][1], flakes[i][2] + 1.3); x.fill();
-      x.fillStyle = '#ffc46b';
-      circle(x, flakes[i][0], flakes[i][1], flakes[i][2]); x.fill();
+    for (i = 0; i < pellets.length; i++) {
+      p = pellets[i];
+      circle(x, p[0], p[1], p[2] + 1.6); x.fill();
+    }
+    for (i = 0; i < flakes.length; i++) {
+      f = flakes[i];
+      x.save(); x.translate(f[0], f[1]); x.rotate(f[3]);
+      x.beginPath();
+      x.moveTo(-f[2] - 1.4, -f[2] * 0.5 - 1.4); x.lineTo(f[2] + 1.4, -f[2] - 1.4);
+      x.lineTo(f[2] * 0.7 + 1.4, f[2] + 1.4); x.lineTo(-f[2] - 1.4, f[2] * 0.7 + 1.4);
+      x.closePath(); x.fill();
+      x.restore();
+    }
+    /* pellets */
+    for (i = 0; i < pellets.length; i++) {
+      p = pellets[i];
+      var g = x.createRadialGradient(p[0] - p[2] * 0.35, p[1] - p[2] * 0.4, p[2] * 0.15, p[0], p[1], p[2] * 1.15);
+      g.addColorStop(0, '#ffb877');
+      g.addColorStop(0.6, '#e0712f');
+      g.addColorStop(1, '#a0410f');
+      x.fillStyle = g;
+      circle(x, p[0], p[1], p[2]); x.fill();
+      x.fillStyle = 'rgba(255,255,255,0.5)';
+      circle(x, p[0] - p[2] * 0.35, p[1] - p[2] * 0.4, p[2] * 0.28); x.fill();
+    }
+    /* flakes */
+    for (i = 0; i < flakes.length; i++) {
+      f = flakes[i];
+      x.save(); x.translate(f[0], f[1]); x.rotate(f[3]);
+      x.fillStyle = '#c8913f';
+      x.beginPath();
+      x.moveTo(-f[2], -f[2] * 0.5); x.lineTo(f[2], -f[2]);
+      x.lineTo(f[2] * 0.7, f[2]); x.lineTo(-f[2], f[2] * 0.7);
+      x.closePath(); x.fill();
+      x.fillStyle = 'rgba(255,238,196,0.55)';
+      x.beginPath();
+      x.moveTo(-f[2] * 0.4, -f[2] * 0.3); x.lineTo(f[2] * 0.5, -f[2] * 0.5);
+      x.lineTo(f[2] * 0.2, f[2] * 0.3);
+      x.closePath(); x.fill();
+      x.restore();
     }
   }
 
-  /* Pointing hand - shown over a collectable coin. */
+  /* The familiar click hand, shown over a collectable coin. Shapes are stroked
+   * then filled one by one: util.roundRect starts a fresh path, so it cannot be
+   * used to accumulate one, and separate fills avoid winding holes where the
+   * finger, fist and thumb overlap. */
   function drawHandCursor(x) {
-    function limbs(w, color) {
-      x.strokeStyle = color;
-      x.lineWidth = w;
-      x.lineCap = 'round';
-      x.lineJoin = 'round';
-      x.beginPath(); x.moveTo(10, 6); x.lineTo(10, 16); x.stroke();
-      x.beginPath(); x.moveTo(8, 20); x.lineTo(5, 24); x.stroke();
+    function rr(rx, ry, rw, rh, r) {
+      x.moveTo(rx + r, ry);
+      x.arcTo(rx + rw, ry, rx + rw, ry + rh, r);
+      x.arcTo(rx + rw, ry + rh, rx, ry + rh, r);
+      x.arcTo(rx, ry + rh, rx, ry, r);
+      x.arcTo(rx, ry, rx + rw, ry, r);
+      x.closePath();
     }
-    limbs(8.5, INK);
-    x.fillStyle = INK;
-    util.roundRect(x, 5, 13, 17, 16, 6.5); x.fill();
-    limbs(5, '#ffffff');
-    x.fillStyle = '#f4fbff';
-    util.roundRect(x, 7, 15, 13, 12, 5); x.fill();
-    x.strokeStyle = '#ffffff';
-    x.lineWidth = 5.5;
+    function eachShape(paint) {
+      x.beginPath(); rr(6.5, 12, 14, 15, 4.5); paint();          /* fist */
+      x.beginPath(); rr(8.6, 2.5, 5.4, 12.5, 2.7); paint();      /* raised finger */
+      x.beginPath();                                             /* thumb */
+      x.moveTo(7, 16.6); x.lineTo(3.4, 20.3); x.lineTo(5.6, 25.3); x.lineTo(9.4, 23.5);
+      x.closePath(); paint();
+    }
+    x.lineJoin = 'round';
     x.lineCap = 'round';
-    x.beginPath(); x.moveTo(10, 7); x.lineTo(10, 15); x.stroke();
-    x.strokeStyle = 'rgba(5,24,38,0.4)';
-    x.lineWidth = 1.2;
+    x.strokeStyle = INK;
+    x.lineWidth = 3;
+    eachShape(function () { x.stroke(); });
+    x.fillStyle = '#ffffff';
+    eachShape(function () { x.fill(); });
+    /* folded knuckles */
+    x.strokeStyle = 'rgba(5,24,38,0.45)';
+    x.lineWidth = 1.3;
     x.beginPath();
-    x.moveTo(13.5, 17); x.lineTo(13.5, 21);
-    x.moveTo(17, 18); x.lineTo(17, 21);
+    x.moveTo(14.4, 14.8); x.lineTo(14.4, 19.8);
+    x.moveTo(17.6, 15.4); x.lineTo(17.6, 19.8);
     x.stroke();
   }
 
@@ -2515,8 +2573,8 @@
   function makeCursors() {
     try {
       return {
-        feed: cursorSprite(drawFeedCursor, 34, 8, 7),
-        hand: cursorSprite(drawHandCursor, 34, 10, 5),
+        feed: cursorSprite(drawFeedCursor, 30, 14, 14),
+        hand: cursorSprite(drawHandCursor, 30, 11, 3),
         target: cursorSprite(drawTargetCursor, 36, 18, 18)
       };
     } catch (e) {
@@ -2528,7 +2586,7 @@
     makeCursors: makeCursors,
     FONT: FONT,
     themes: themes,
-    text: text, measure: measure, circle: circle, fillCircle: fillCircle, ellipse: ellipse,
+    text: text, measure: measure, wrapText: wrapText, circle: circle, fillCircle: fillCircle, ellipse: ellipse,
     makeDecor: makeDecor, drawBackground: drawBackground, drawGlass: drawGlass,
     drawFish: drawFish, drawPet: drawPet, drawAlien: drawAlien,
     fishShapes: fishShapes, petShapes: petShapes, alienShapes: alienShapes, accessories: accessories,

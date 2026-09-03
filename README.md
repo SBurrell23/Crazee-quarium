@@ -13,14 +13,18 @@ one very hungry boss at the bottom.
   sizes and drop progressively better coins.
 - **Click coins** to bank them before they fade off the sea floor. A coin about to be lost
   turns red and pulses. Drag across a spill to sweep it up.
-- **Click aliens** to hit them with your laser. Upgrade the laser when they start arriving in pairs.
+- **Click aliens** to hit them with your laser, which fires from an emitter above the tank.
+  Upgrade it when they start arriving in pairs.
 - **Buy all three egg pieces** to finish a level. The egg hatches into a pet that joins you for
   the rest of the game — you take three pets on every dive.
 - If every fish dies and you cannot afford another, the tank is lost.
 
-The cursor tells you what a click will do: a pinching hand over open water, a pointing hand over
-a coin, a reticle over anything shootable. Holding the button keeps the laser firing but never
-sprays food. `S` or `Esc` opens the sound panel, `Space`/`P` pauses, `M` mutes.
+The cursor tells you what a click will do: a scatter of food over open water, a click hand over a
+coin, a reticle over anything shootable. Holding the button keeps the laser firing but never
+sprays food.
+
+`I` (or the info button) opens a how-to-play panel with tips and your progress through the
+ladder; `S` or `Esc` opens the sound panel; `Space`/`P` pauses; `M` mutes.
 
 ### The food chain
 
@@ -62,6 +66,11 @@ Vanilla JavaScript, no build step, no dependencies, no frameworks.
   same tank. Total save size is under 1 KB.
 - **Cursors are drawn in code too** - three sprites rendered to canvas at boot and handed to CSS
   as data URLs, so the pointer art adds no files either.
+- **Fish head for the nearest food**, re-picking every 0.15s. Where several fish are feeding they
+  prefer a piece nobody else is going for, but always fall back to the plain nearest one, so no
+  fish is ever left without a target while there is food in the water.
+- **The info and sound panels are modal overlays** available from every screen; the tank freezes
+  behind them and clicks cannot fall through to the water.
 - **Responsive**: the canvas fills the window at device pixel ratio. Narrow viewports get a
   two-line HUD and a two-row shop; the layout is driven by the canvas's own box via a
   `ResizeObserver`, so it stays correct in iframes and after orientation changes.

@@ -20,7 +20,6 @@
     this.rot = rand(0, TAU);
     this.spin = rand(-2, 2);
     this.s = (4.5 + tier * 1.5) * level.scale;
-    this.claimedBy = null;
     this.onFloor = false;
     this.floorTime = 0;
     this.age = 0;
@@ -258,41 +257,51 @@
     }
   };
 
+  /* Head for the nearest edible thing. Where several fish are feeding, an item
+   * another fish is already going for is passed over IF something else is free,
+   * so a shoal spreads across the available food instead of ganging up on one
+   * piece. Crucially there is always a fallback to the plain nearest item, so a
+   * fish is never left with no target at all (that used to starve surplus fish
+   * with pellets in the water). Claim counts are refreshed once per frame by
+   * the level, so this stays cheap. */
   Fish.prototype.findTarget = function () {
-    var diet = this.def.diet, best = null, bestD = Infinity, i, d;
+    var diet = this.def.diet;
+    var free = null, freeD = Infinity, any = null, anyD = Infinity;
+    var i, d, list, item;
+
     if (diet.kind === 'food') {
-      var foods = this.level.foods;
-      for (i = 0; i < foods.length; i++) {
-        var f = foods[i];
-        if (f.dead) continue;
-        if (f.claimedBy && f.claimedBy !== this && !f.claimedBy.dead && !f.claimedBy.dying) continue;
-        d = dist(this.x, this.y, f.x, f.y);
-        if (d < bestD) { bestD = d; best = f; }
+      list = this.level.foods;
+      for (i = 0; i < list.length; i++) {
+        item = list[i];
+        if (item.dead) continue;
+        d = dist(this.x, this.y, item.x, item.y);
+        if (d < anyD) { anyD = d; any = item; }
+        if ((!item.claims || item === this.target) && d < freeD) { freeD = d; free = item; }
       }
     } else if (diet.kind === 'drop') {
-      var drops = this.level.drops;
-      for (i = 0; i < drops.length; i++) {
-        var dr = drops[i];
-        if (dr.dead || dr.collected) continue;
-        if (diet.types.indexOf(dr.type) < 0) continue;
-        if (dr.claimedBy && dr.claimedBy !== this) continue;
-        d = dist(this.x, this.y, dr.x, dr.y);
-        if (d < bestD) { bestD = d; best = dr; }
+      list = this.level.drops;
+      for (i = 0; i < list.length; i++) {
+        item = list[i];
+        if (item.dead || item.collected) continue;
+        if (diet.types.indexOf(item.type) < 0) continue;
+        d = dist(this.x, this.y, item.x, item.y);
+        if (d < anyD) { anyD = d; any = item; }
+        if ((!item.claims || item === this.target) && d < freeD) { freeD = d; free = item; }
       }
     } else if (diet.kind === 'fish') {
-      var fl = this.level.fish;
-      for (i = 0; i < fl.length; i++) {
-        var pf = fl[i];
-        if (pf === this || pf.dead) continue;
-        if (diet.species.indexOf(pf.species) < 0) continue;
-        if (pf.stage > (diet.maxStage === undefined ? 9 : diet.maxStage)) continue;
-        d = dist(this.x, this.y, pf.x, pf.y);
-        if (d < bestD) { bestD = d; best = pf; }
+      list = this.level.fish;
+      for (i = 0; i < list.length; i++) {
+        item = list[i];
+        if (item === this || item.dead || item.dying) continue;
+        if (diet.species.indexOf(item.species) < 0) continue;
+        if (item.stage > (diet.maxStage === undefined ? 9 : diet.maxStage)) continue;
+        d = dist(this.x, this.y, item.x, item.y);
+        if (d < anyD) { anyD = d; any = item; }
+        if ((!item.claims || item === this.target) && d < freeD) { freeD = d; free = item; }
       }
     }
-    if (this.target && this.target.claimedBy === this) this.target.claimedBy = null;
-    this.target = best;
-    if (best && (diet.kind === 'food' || diet.kind === 'drop')) best.claimedBy = this;
+    this.target = free || any;
+    this.retarget = 0.15;
   };
 
   Fish.prototype.update = function (dt) {
@@ -360,12 +369,14 @@
     var appetite = kind === 'fish' ? 0.6 : (kind === 'drop' ? 0.82 : 0.92);
     var stillGrowing = this.def.growth && this.def.growth.length && this.stage < this.def.stages.length - 1;
     var wantsFood = this.fullness < appetite || stillGrowing;
-    if (!this.target || this.target.dead || this.target.dying || this.target.collected) {
+    if (!wantsFood) {
       this.target = null;
-      if (wantsFood) this.findTarget();
-    } else if (!wantsFood) {
-      if (this.target.claimedBy === this) this.target.claimedBy = null;
-      this.target = null;
+    } else {
+      /* re-evaluate on a short tick so a fish always heads for whatever is
+       * closest right now, not whatever it picked a while ago */
+      this.retarget = (this.retarget === undefined ? 0 : this.retarget) - dt;
+      var gone = !this.target || this.target.dead || this.target.dying || this.target.collected;
+      if (gone || this.retarget <= 0) this.findTarget();
     }
 
     var speed = this.def.speed * sc * (this.hungry() ? 1.16 : 1);
@@ -373,9 +384,11 @@
     if (this.target) {
       var dx = this.target.x - this.x, dy = this.target.y - this.y;
       var dd = Math.max(1, Math.sqrt(dx * dx + dy * dy));
-      desX = (dx / dd) * speed * 1.35;
-      desY = (dy / dd) * speed * 1.1;
-      var reach = this.size() * 0.42 + (this.target.s || this.target.size ? (this.target.size ? this.target.size() * 0.4 : this.target.s) : 6);
+      var seekW = this.fullness <= 0 ? 1.8 : 1.35;
+      desX = (dx / dd) * speed * seekW;
+      desY = (dy / dd) * speed * (seekW - 0.25);
+      var tSize = this.target.size ? this.target.size() * 0.4 : (this.target.s || 6);
+      var reach = this.size() * 0.42 + tSize;
       if (dd < reach) {
         if (this.def.diet.kind === 'food') this.eatFood(this.target);
         else if (this.def.diet.kind === 'drop') this.eatDrop(this.target);
@@ -415,8 +428,14 @@
         sepY += (oy / od) * push;
       }
     }
-    desX += sepX * speed * 1.5;
-    desY += sepY * speed * 1.5;
+    /* Clamped: an unbounded sum over a dozen neighbours used to overpower the
+     * seek force, shoving fish out of a feeding swarm until they starved. */
+    var sepLen = Math.sqrt(sepX * sepX + sepY * sepY);
+    if (sepLen > 0.001) {
+      var sepScale = Math.min(1, 0.7 / sepLen) * speed;
+      desX += sepX * sepScale;
+      desY += sepY * sepScale;
+    }
 
     /* soft walls */
     var margin = 40 * sc;

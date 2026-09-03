@@ -210,18 +210,154 @@
     art.text(ctx, 'press S or Esc to toggle this panel', x + w / 2, y + h - 22, { size: 12, fill: rgba('#dff1ff', 0.55), weight: 'normal' });
   };
 
-  /* A gear that is present on every screen. */
-  ui.gearButton = function (ctx, W, y) {
+  /* Info and sound, present on every screen. */
+  ui.cornerButtons = function (ctx, W, y) {
     var size = 40;
     if (ui.button('gear', W - size - 14, y, size, size, '', { iconOnly: true, icon: 'gear', iconSize: 13, radius: 10 })) {
       if (ui.settingsOpen) ui.closeSettings(); else ui.openSettings();
     }
-    return size + 14;
+    if (ui.button('info', W - size * 2 - 24, y, size, size, '', { iconOnly: true, icon: 'info', iconSize: 13, radius: 10 })) {
+      if (ui.infoOpen) ui.closeInfo(); else ui.openInfo();
+    }
+    return size * 2 + 24;
+  };
+
+  /* ---------------------------------------------------------- info panel */
+
+  ui.infoOpen = false;
+  ui.openInfo = function () { ui.infoOpen = true; audio.play('click'); };
+  ui.closeInfo = function () { ui.infoOpen = false; audio.play('back'); };
+
+  var INFO_ROWS = [
+    ['food', 'Click the water to drop one piece of food. Fed fish grow bigger and pay better.'],
+    ['fish', 'Click a coin to bank it. A coin turns red just before it is lost.'],
+    ['laser', 'Click an alien over and over to blast it. Hold the button to keep firing.'],
+    ['egg', 'Buy all three egg pieces to finish a level and hatch a new pet.'],
+    ['heart', 'Three pets dive with you. Every pet you hatch works for free, forever.'],
+    ['skull', 'Lose every fish with no cash left for another and the tank is lost.']
+  ];
+
+  var INFO_TIPS = [
+    'Upgrade Food Amount early - more pellets in the water means fewer hungry fish.',
+    'Large guppies are safe from predators, so grow a few before you buy one.',
+    'Keep a little cash spare so you can always restock after a raid.',
+    'The cursor shows what a click will do: food, a coin, or a target.'
+  ];
+
+  ui.drawInfo = function (ctx, game) {
+    if (!ui.infoOpen) return;
+    ui.ctx = ctx;
+    var W = game.W, H = game.H;
+    ctx.fillStyle = 'rgba(2,12,22,0.66)';
+    ctx.fillRect(0, 0, W, H);
+
+    var w = Math.min(780, W - 28);
+    var pad = clamp(w * 0.04, 16, 30);
+    var textW = w - pad * 2 - 34;
+
+    /* Lay the content out at a candidate size, shrinking until it fits. */
+    var rowSize, tipSize, lineH, rows, tips, contentH, headH, footH;
+    var size = clamp(Math.min(W, H) * 0.021, 10, 15);
+    for (var attempt = 0; attempt < 4; attempt++) {
+      rowSize = size;
+      tipSize = Math.max(9, size - 1);
+      lineH = rowSize * 1.32;
+      rows = [];
+      tips = [];
+      var i;
+      for (i = 0; i < INFO_ROWS.length; i++) {
+        rows.push(art.wrapText(ctx, INFO_ROWS[i][1], textW, rowSize, 'normal'));
+      }
+      for (i = 0; i < INFO_TIPS.length; i++) {
+        tips.push(art.wrapText(ctx, '-  ' + INFO_TIPS[i], w - pad * 2 - 24, tipSize, 'normal'));
+      }
+      headH = rowSize * 5.4;
+      footH = rowSize * 4.6;
+      var rowsH = 0;
+      for (i = 0; i < rows.length; i++) rowsH += Math.max(lineH * 1.7, rows[i].length * lineH + lineH * 0.5);
+      var tipsH = tipSize * 2.2;
+      for (i = 0; i < tips.length; i++) tipsH += tips[i].length * tipSize * 1.3;
+      contentH = headH + rowsH + tipsH + footH + pad * 2;
+      if (contentH <= H - 28 || size <= 10) break;
+      size = Math.max(10, size - 1.2);
+    }
+
+    var h = Math.min(H - 20, contentH);
+    var x = (W - w) / 2, y = (H - h) / 2;
+    art.panel(ctx, x, y, w, h, { radius: 20 });
+
+    var cy = y + pad + rowSize * 1.5;
+    art.text(ctx, 'HOW TO PLAY', x + w / 2, cy, {
+      size: rowSize * 2, fill: '#ffe066', stroke: '#04202f', strokeW: 6
+    });
+    cy += rowSize * 1.9;
+    art.text(ctx, data.levels.length + ' levels across ' + data.tanks.length + ' tanks   .   ' +
+      data.pets.length + ' pets to hatch', x + w / 2, cy, {
+        size: rowSize * 1.05, fill: '#8ff0ff', weight: 'normal'
+      });
+    cy += rowSize * 1.9;
+
+    /* control rows */
+    for (var r = 0; r < rows.length; r++) {
+      var rh = Math.max(lineH * 1.7, rows[r].length * lineH + lineH * 0.5);
+      art.panel(ctx, x + pad, cy, w - pad * 2, rh - lineH * 0.3, {
+        radius: 10, top: 'rgba(12,58,84,0.7)', bottom: 'rgba(6,30,48,0.75)',
+        gloss: false, shadow: false, strokeColor: 'rgba(140,220,255,0.2)'
+      });
+      var mid = cy + (rh - lineH * 0.3) / 2;
+      art.icon(ctx, INFO_ROWS[r][0], x + pad + 20, mid, rowSize * 0.78, '#8ff0ff');
+      for (var li = 0; li < rows[r].length; li++) {
+        art.text(ctx, rows[r][li], x + pad + 40, mid - (rows[r].length - 1) * lineH / 2 + li * lineH, {
+          size: rowSize, fill: '#dff1ff', align: 'left', weight: 'normal'
+        });
+      }
+      cy += rh;
+    }
+
+    /* tips */
+    cy += tipSize * 0.5;
+    art.text(ctx, 'TIPS', x + pad + 4, cy, { size: tipSize * 1.15, fill: '#ffe066', align: 'left' });
+    cy += tipSize * 1.5;
+    for (var t = 0; t < tips.length; t++) {
+      for (var tl = 0; tl < tips[t].length; tl++) {
+        art.text(ctx, tips[t][tl], x + pad + (tl ? 16 : 4), cy, {
+          size: tipSize, fill: rgba('#dff1ff', 0.9), align: 'left', weight: 'normal'
+        });
+        cy += tipSize * 1.3;
+      }
+    }
+
+    /* progress, without giving away what is coming */
+    var cleared = game.save.won ? data.levels.length : game.save.unlocked;
+    cy = y + h - pad - rowSize * 2.6;
+    art.text(ctx, 'You have cleared ' + cleared + ' of ' + data.levels.length + ' levels.' +
+      (game.save.won ? '  All of them. Nicely done.' : ''), x + w / 2, cy, {
+        size: rowSize * 1.05, fill: '#b7ffb0', weight: 'normal'
+      });
+
+    var bw = Math.min(200, w - pad * 2);
+    if (ui.button('info-close', x + w / 2 - bw / 2, y + h - pad - rowSize * 1.9, bw, rowSize * 2.9, 'CLOSE', {
+      accent: 'gold', size: rowSize * 1.25
+    })) ui.closeInfo();
   };
 
   /* -------------------------------------------------------------- in-game */
 
   /* ------------------------------------------------- shared HUD fragments */
+
+  /* Small labelled readout used for FISH and FOOD in the top bar. */
+  function pill(ctx, x, y, w, h, label, size, alert, textColor) {
+    art.panel(ctx, x, y, w, h, {
+      radius: h / 2,
+      top: alert ? 'rgba(140,28,36,0.95)' : 'rgba(12,60,86,0.9)',
+      bottom: alert ? 'rgba(92,16,22,0.96)' : 'rgba(4,28,46,0.92)',
+      gloss: false, shadow: false,
+      strokeColor: alert ? 'rgba(255,150,150,0.75)' : 'rgba(140,220,255,0.35)'
+    });
+    art.text(ctx, label, x + w / 2, y + h / 2 + 1, {
+      size: size, fill: textColor, stroke: '#04202f', strokeW: 3
+    });
+  }
 
   function drawEggPips(ctx, level, cx, cy, r, gap) {
     for (var e = 0; e < 3; e++) {
@@ -284,7 +420,12 @@
     if (ui.button('pause', W - btn * 2 - 22, btnY, btn, btn, '', {
       iconOnly: true, icon: 'pause', iconSize: btn * 0.3, radius: 10
     })) game.pause();
-    var right = W - btn * 2 - 32;
+    if (ui.button('info', W - btn * 3 - 32, btnY, btn, btn, '', {
+      iconOnly: true, icon: 'info', iconSize: btn * 0.32, radius: 10
+    })) {
+      if (ui.infoOpen) ui.closeInfo(); else ui.openInfo();
+    }
+    var right = W - btn * 3 - 42;
 
     /* money */
     var coinR = narrow ? 10 : 14;
@@ -301,18 +442,20 @@
     if (narrow) {
       /* two compact lines: money on top, level + counters underneath */
       var line2 = h * 0.76;
-      art.text(ctx, level.cfg.label + '  ' + level.cfg.name.toUpperCase(), 18, line2, {
-        size: Math.min(14, h * 0.19), fill: '#dff1ff', align: 'left', stroke: '#04202f', strokeW: 3
+      var nSize = Math.min(13, h * 0.17);
+      var fishStrN = 'FISH ' + level.fishCount() + '/' + level.cfg.fishCap;
+      var foodStrN = 'FOOD ' + foodNow + '/' + foodMax;
+      var npw = Math.max(art.measure(ctx, fishStrN, nSize), art.measure(ctx, foodStrN, nSize)) + 20;
+      /* the level name is dropped to just its number when the pills need the room */
+      var nameSize = Math.min(14, h * 0.19);
+      var nameStr = level.cfg.label + '  ' + level.cfg.name.toUpperCase();
+      if (art.measure(ctx, nameStr, nameSize) > right - npw * 2 - 40) nameStr = level.cfg.label;
+      art.text(ctx, nameStr, 18, line2, {
+        size: nameSize, fill: '#dff1ff', align: 'left', stroke: '#04202f', strokeW: 3
       });
-      var nSize = Math.min(13, h * 0.18);
-      var foodStrN = 'food ' + foodNow + '/' + foodMax;
-      art.text(ctx, foodStrN, right, line2, {
-        size: nSize, fill: foodFull ? '#ff9aa2' : '#ffe066', align: 'right', stroke: '#04202f', strokeW: 3
-      });
-      art.text(ctx, 'fish ' + level.fishCount() + '/' + level.cfg.fishCap,
-        right - art.measure(ctx, foodStrN, nSize) - 14, line2, {
-          size: nSize, fill: rgba('#8ff0ff', 0.9), align: 'right', weight: 'normal'
-        });
+      var emptyN = level.fishCount() === 0;
+      pill(ctx, right - npw, h * 0.56, npw, h * 0.34, foodStrN, nSize, foodFull, foodFull ? '#ffd9dd' : '#ffe066');
+      pill(ctx, right - npw * 2 - 8, h * 0.56, npw, h * 0.34, fishStrN, nSize, emptyN, emptyN ? '#ffd9dd' : '#8ff0ff');
       if (level.cfg.boss) drawBossBar(ctx, level, right - 118, h * 0.3, 118, 9, 12);
       else drawEggPips(ctx, level, right - 30, h * 0.32, Math.min(12, h * 0.15), 25);
       return;
@@ -323,28 +466,19 @@
     art.text(ctx, level.cfg.label + '  ' + level.cfg.name.toUpperCase(), cx, h * 0.36, {
       size: Math.min(21, h * 0.29), fill: '#dff1ff', stroke: '#04202f', strokeW: 4
     });
-    art.text(ctx, 'click water to feed   |   click coins to collect   |   click aliens to shoot', cx, h * 0.74, {
-      size: Math.min(13, h * 0.185), fill: rgba('#8ff0ff', 0.8), weight: 'normal'
+    art.text(ctx, data.tanks[level.cfg.tank].name, cx, h * 0.74, {
+      size: Math.min(14, h * 0.2), fill: rgba('#8ff0ff', 0.8), weight: 'normal'
     });
 
-    /* fish count and a food pill, right of the money */
+    /* matching FISH and FOOD pills, right of the money */
     var lx = 18 + coinR * 2 + 8 + art.measure(ctx, moneyStr, moneySize) + 18;
     var cSize = Math.min(15, h * 0.21);
-    art.text(ctx, 'fish ' + level.fishCount() + '/' + level.cfg.fishCap, lx + 6, h * 0.28, {
-      size: cSize, fill: rgba('#8ff0ff', 0.95), align: 'left', stroke: '#04202f', strokeW: 3, weight: 'normal'
-    });
+    var fishStr = 'FISH ' + level.fishCount() + '/' + level.cfg.fishCap;
     var foodStr = 'FOOD ' + foodNow + '/' + foodMax;
-    var fpw = art.measure(ctx, foodStr, cSize) + 26;
-    art.panel(ctx, lx, h * 0.52, fpw, h * 0.4, {
-      radius: h * 0.2,
-      top: foodFull ? 'rgba(140,28,36,0.95)' : 'rgba(12,60,86,0.9)',
-      bottom: foodFull ? 'rgba(92,16,22,0.96)' : 'rgba(4,28,46,0.92)',
-      gloss: false, shadow: false,
-      strokeColor: foodFull ? 'rgba(255,150,150,0.75)' : 'rgba(140,220,255,0.35)'
-    });
-    art.text(ctx, foodStr, lx + fpw / 2, h * 0.72, {
-      size: cSize, fill: foodFull ? '#ffd9dd' : '#ffe066', stroke: '#04202f', strokeW: 3
-    });
+    var fpw = Math.max(art.measure(ctx, fishStr, cSize), art.measure(ctx, foodStr, cSize)) + 26;
+    var empty = level.fishCount() === 0;
+    pill(ctx, lx, h * 0.09, fpw, h * 0.38, fishStr, cSize, empty, empty ? '#ffd9dd' : '#8ff0ff');
+    pill(ctx, lx, h * 0.53, fpw, h * 0.38, foodStr, cSize, foodFull, foodFull ? '#ffd9dd' : '#ffe066');
 
     if (level.cfg.boss) {
       drawBossBar(ctx, level, right - 156, h * 0.5, 150, 12, 15);
@@ -504,7 +638,7 @@
     by += bh + gap;
     if (ui.button('t-levels', bx, by, bw, bh, 'LEVEL SELECT', { size: 20 })) game.setScreen('map');
     by += bh + gap;
-    if (ui.button('t-how', bx, by, bw, bh, 'HOW TO PLAY', { size: 20 })) game.setScreen('howto');
+    if (ui.button('t-how', bx, by, bw, bh, 'HOW TO PLAY', { size: 20, icon: 'info', iconSize: 11 })) ui.openInfo();
     by += bh + gap;
     if (ui.button('t-sound', bx, by, bw, bh, 'SOUND', { size: 20, icon: 'speaker', iconExtra: audio.settings.muted })) ui.openSettings();
 
@@ -523,39 +657,7 @@
     if (started) {
       if (ui.button('t-reset', 14, H - 44, 128, 32, 'Reset Save', { size: 13, accent: 'danger' })) game.confirmReset();
     }
-    ui.gearButton(ctx, W, 14);
-  };
-
-  ui.drawHowTo = function (ctx, game) {
-    ui.ctx = ctx;
-    var W = game.W, H = game.H;
-    game.drawAmbient(ctx);
-    ctx.fillStyle = 'rgba(2,14,26,0.55)';
-    ctx.fillRect(0, 0, W, H);
-
-    var w = Math.min(760, W - 40), h = Math.min(560, H - 80);
-    var x = (W - w) / 2, y = (H - h) / 2;
-    art.panel(ctx, x, y, w, h, { radius: 20 });
-    art.text(ctx, 'HOW TO PLAY', x + w / 2, y + 42, { size: 30, fill: '#ffe066', stroke: '#04202f', strokeW: 6 });
-
-    var rows = [
-      ['food', 'Click the water to drop food. Fish that eat grow bigger and pay better.'],
-      ['fish', 'Guppies drop coins as they grow. Click a coin before it fades on the floor.'],
-      ['laser', 'Aliens raid the tank. Click one repeatedly to blast it. Upgrade the laser.'],
-      ['egg', 'Buy all three egg pieces to finish a level and hatch a pet.'],
-      ['heart', 'Pets help forever: three of them join you on every dive.'],
-      ['skull', 'If every fish dies and you cannot afford another, the tank is lost.']
-    ];
-    var ry = y + 88;
-    for (var i = 0; i < rows.length; i++) {
-      art.panel(ctx, x + 26, ry, w - 52, 58, { radius: 12, top: 'rgba(12,58,84,0.7)', bottom: 'rgba(6,30,48,0.75)', gloss: false, shadow: false, strokeColor: 'rgba(140,220,255,0.2)' });
-      art.icon(ctx, rows[i][0], x + 60, ry + 29, 15, '#8ff0ff');
-      art.text(ctx, rows[i][1], x + 92, ry + 29, { size: 15, fill: '#dff1ff', align: 'left', weight: 'normal' });
-      ry += 66;
-    }
-    art.text(ctx, 'hold the mouse button to keep feeding or firing', x + w / 2, y + h - 62, { size: 14, fill: rgba('#8ff0ff', 0.9), weight: 'normal' });
-    if (ui.button('h-back', x + w / 2 - 90, y + h - 48, 180, 40, 'BACK', { accent: 'gold' })) game.setScreen('title');
-    ui.gearButton(ctx, W, 14);
+    ui.cornerButtons(ctx, W, 14);
   };
 
   /* ----------------------------------------------------------------- map */
@@ -647,7 +749,7 @@
     art.text(ctx, save.pets.length + ' / ' + data.pets.length + ' pets', W / 2, H - 34, {
       size: 15, fill: '#ffe066', stroke: '#04202f', strokeW: 4
     });
-    ui.gearButton(ctx, W, H - 56);
+    ui.cornerButtons(ctx, W, H - 56);
   };
 
   /* ---------------------------------------------------------- pet select */
@@ -732,7 +834,7 @@
         size: 13, fill: rgba('#dff1ff', 0.6), weight: 'normal'
       });
     }
-    ui.gearButton(ctx, W, H - 58);
+    ui.cornerButtons(ctx, W, H - 58);
   };
 
   /* -------------------------------------------------------------- pause */
@@ -833,7 +935,7 @@
       }
       if (ui.button('lc-map', 14, H - 68, 130, 44, 'MAP', { size: 17 })) game.quitToMap();
     }
-    ui.gearButton(ctx, W, 14);
+    ui.cornerButtons(ctx, W, 14);
   };
 
   /* ------------------------------------------------------------ game over */
@@ -864,7 +966,7 @@
     art.text(ctx, 'tip: keep a few coins in reserve so you can always restock', W / 2, H - 44, {
       size: 13, fill: rgba('#ffd9dd', 0.6), weight: 'normal'
     });
-    ui.gearButton(ctx, W, 14);
+    ui.cornerButtons(ctx, W, 14);
   };
 
   /* ------------------------------------------------------------------ win */
@@ -933,7 +1035,7 @@
         size: 13, fill: rgba('#dff1ff', 0.7), weight: 'normal'
       });
     }
-    ui.gearButton(ctx, W, 14);
+    ui.cornerButtons(ctx, W, 14);
   };
 
   /* ----------------------------------------------------------- confirm box */

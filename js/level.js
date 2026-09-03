@@ -392,7 +392,8 @@
       if (this.fireCooldown <= 0) {
         this.fireCooldown = 0.13;
         a.damage(this.laserDamage(), 'laser');
-        this.beam(x, this.H, a.x, a.y + a.size() * 0.1, 'laser', '#ff5f4d');
+        /* the laser fires from an emitter above the tank, not from the shop bar */
+        this.beam(this.W / 2, 0, a.x, a.y + a.size() * 0.1, 'laser', '#ff5f4d');
         this.burst(a.x + rand(-8, 8), a.y + rand(-8, 8), { count: 5, color: '#ffd166', speed: 130, size: 2.6, kind: 'spark' });
         audio.play('laser');
       }
@@ -458,6 +459,16 @@
           }
         }
       }
+    }
+
+    /* Refresh who is already heading for what, once per frame, so target
+     * picking can prefer an uncontested pellet without an O(n squared) scan. */
+    for (i = 0; i < this.foods.length; i++) this.foods[i].claims = 0;
+    for (i = 0; i < this.drops.length; i++) this.drops[i].claims = 0;
+    for (i = 0; i < this.fish.length; i++) this.fish[i].claims = 0;
+    for (i = 0; i < this.fish.length; i++) {
+      var tgt = this.fish[i].target;
+      if (tgt) tgt.claims = (tgt.claims || 0) + 1;
     }
 
     /* entities */

@@ -474,7 +474,7 @@
   Game.prototype.update = function (dt) {
     this.time += dt;
     this.animT += dt;
-    var blocked = ui.settingsOpen || !!this.confirm;
+    var blocked = ui.settingsOpen || ui.infoOpen || !!this.confirm;
 
     if (this.screen === 'game' && this.level) {
       if (!this.paused && !blocked) {
@@ -494,7 +494,7 @@
       }
     } else if (this.screen === 'win') {
       this.updateWin(dt);
-    } else if (this.screen === 'title' || this.screen === 'map' || this.screen === 'petselect' || this.screen === 'howto') {
+    } else if (this.screen === 'title' || this.screen === 'map' || this.screen === 'petselect') {
       this.updateAmbient(dt);
     } else if (this.screen === 'levelcomplete' || this.screen === 'gameover') {
       if (this.level) {
@@ -508,13 +508,15 @@
 
   Game.prototype.draw = function (ctx) {
     var W = this.W, H = this.H;
-    var overlay = ui.settingsOpen ? 'settings' : (this.confirm ? 'confirm' : (this.paused && this.screen === 'game' ? 'pause' : null));
+    var overlay = ui.settingsOpen ? 'settings'
+      : (ui.infoOpen ? 'info'
+        : (this.confirm ? 'confirm'
+          : (this.paused && this.screen === 'game' ? 'pause' : null)));
     ui.blocked = overlay !== null;
     ui.ctx = ctx;
 
     switch (this.screen) {
       case 'title': ui.drawTitle(ctx, this); break;
-      case 'howto': ui.drawHowTo(ctx, this); break;
       case 'map': ui.drawMap(ctx, this); break;
       case 'petselect': ui.drawPetSelect(ctx, this); break;
       case 'game':
@@ -551,6 +553,8 @@
       ui.blocked = overlay !== 'confirm';
       ui.drawConfirm(ctx, this);
     }
+    ui.blocked = overlay !== 'info';
+    ui.drawInfo(ctx, this);
     ui.blocked = false;
     ui.drawSettings(ctx, W, H);
   };
@@ -560,14 +564,19 @@
   Game.prototype.key = function (code) {
     if (code === 'Escape') {
       if (ui.settingsOpen) { ui.closeSettings(); return; }
+      if (ui.infoOpen) { ui.closeInfo(); return; }
       if (this.confirm) { this.confirm = null; return; }
       if (this.screen === 'game') { if (this.paused) this.resume(); else this.pause(); return; }
-      if (this.screen === 'howto' || this.screen === 'petselect') { this.setScreen(this.screen === 'petselect' ? 'map' : 'title'); return; }
+      if (this.screen === 'petselect') { this.setScreen('map'); return; }
       if (this.screen === 'map') { this.setScreen('title'); return; }
       return;
     }
     if (code === 'KeyS') {
       if (ui.settingsOpen) ui.closeSettings(); else ui.openSettings();
+      return;
+    }
+    if (code === 'KeyI') {
+      if (ui.infoOpen) ui.closeInfo(); else ui.openInfo();
       return;
     }
     if (code === 'KeyM') { audio.toggleMuted(); return; }

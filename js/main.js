@@ -125,7 +125,7 @@
 
     /* one-time nudge: browsers will not start audio before a gesture.
      * Sits above the shop bar in-game so it never covers a button. */
-    if (!audio.isUnlocked()) {
+    if (!audio.isUnlocked() && !ui.infoOpen && !ui.settingsOpen && !game.confirm) {
       var inGame = game.screen === 'game';
       var hintY = inGame ? H - game.metrics().shopH - 34 : 22;
       var label = 'click anywhere to turn on sound';
