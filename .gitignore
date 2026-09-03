@@ -1,0 +1,10 @@
+# Claude Code local settings (dev server config, session state)
+.claude/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+
+node_modules/
