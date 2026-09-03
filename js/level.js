@@ -34,7 +34,6 @@
     this.bossBeaten = false;
     this.state = 'playing';
     this.emptyTankTimer = 0;
-    this.feedCooldown = 0;
     this.fireCooldown = 0;
     this.alarm = 0;
     this.shakeAmt = 0;
@@ -331,57 +330,84 @@
     return best;
   };
 
+  /* ---- hit tests, shared by clicking and by the cursor art ---- */
+
+  Level.prototype.inTank = function (x, y) {
+    return y >= this.bounds.t - 4 && y <= this.shopTop;
+  };
+  Level.prototype.dropAt = function (x, y) {
+    for (var i = this.drops.length - 1; i >= 0; i--) {
+      var d = this.drops[i];
+      if (d.dead || d.collected) continue;
+      if (util.dist(x, y, d.x, d.y) < Math.max(20, d.s * 2.4)) return d;
+    }
+    return null;
+  };
+  Level.prototype.threatAt = function (x, y) {
+    for (var i = this.projectiles.length - 1; i >= 0; i--) {
+      var p = this.projectiles[i];
+      if (p.dead || p.friendly || p.deflected || p.delay > 0) continue;
+      if (util.dist(x, y, p.x, p.y) < Math.max(22, p.s * 3)) return p;
+    }
+    return null;
+  };
+  Level.prototype.alienAt = function (x, y) {
+    for (var i = this.aliens.length - 1; i >= 0; i--) {
+      var a = this.aliens[i];
+      if (a.dead || a.dying) continue;
+      if (util.dist(x, y, a.x, a.y) < a.size() * 0.48) return a;
+    }
+    return null;
+  };
+
+  /* What the pointer is over, so the cursor can show the matching art. */
+  Level.prototype.hoverKind = function (x, y) {
+    if (this.state !== 'playing' || !this.inTank(x, y)) return null;
+    if (this.dropAt(x, y)) return 'coin';
+    if (this.threatAt(x, y) || this.alienAt(x, y)) return 'target';
+    return 'feed';
+  };
+
   /* Returns true when the click was used by the world. */
   Level.prototype.pointerAction = function (x, y, isHold) {
     if (this.state !== 'playing' && !this.bossBeaten) return false;
-    if (y < this.bounds.t - 4 || y > this.shopTop) return false;
-    var i, d;
+    if (!this.inTank(x, y)) return false;
 
-    /* 1. coins first - they are the reward for paying attention */
-    for (i = this.drops.length - 1; i >= 0; i--) {
-      d = this.drops[i];
-      if (d.dead || d.collected) continue;
-      var r = Math.max(20, d.s * 2.4);
-      if (util.dist(x, y, d.x, d.y) < r) { d.collect(false); return true; }
-    }
+    /* 1. coins first - they are the reward for paying attention. Dragging
+     *    across a spill collects the lot. */
+    var d = this.dropAt(x, y);
+    if (d) { d.collect(false); return true; }
+
     /* 2. incoming missiles and orbs */
-    for (i = this.projectiles.length - 1; i >= 0; i--) {
-      var p = this.projectiles[i];
-      if (p.dead || p.friendly || p.delay > 0) continue;
-      if (util.dist(x, y, p.x, p.y) < Math.max(22, p.s * 3)) {
-        if (p.kind === 'orb') p.deflect();
-        else p.destroy();
-        return true;
-      }
-    }
-    /* 3. aliens - the laser */
-    if (this.fireCooldown <= 0) {
-      for (i = this.aliens.length - 1; i >= 0; i--) {
-        var a = this.aliens[i];
-        if (a.dead || a.dying) continue;
-        if (util.dist(x, y, a.x, a.y) < a.size() * 0.48) {
-          this.fireCooldown = 0.13;
-          a.damage(this.laserDamage(), 'laser');
-          this.beam(x, this.H, a.x, a.y + a.size() * 0.1, 'laser', '#ff5f4d');
-          this.burst(a.x + rand(-8, 8), a.y + rand(-8, 8), { count: 5, color: '#ffd166', speed: 130, size: 2.6, kind: 'spark' });
-          audio.play('laser');
-          return true;
-        }
-      }
-    }
-    /* 4. otherwise: feed the tank */
-    if (this.feedCooldown <= 0) {
-      if (this.paidFoodCount() >= this.maxFood()) {
-        if (!isHold) {
-          audio.play('denied');
-          this.pop('food limit - upgrade Food Amount', x, y - 14, '#ff9aa2', 15);
-        }
-        return true;
-      }
-      this.feedCooldown = isHold ? 0.22 : 0.06;
-      this.spawnFood(x, Math.max(this.bounds.t + 6, y), false);
+    var p = this.threatAt(x, y);
+    if (p) {
+      if (p.kind === 'orb') p.deflect();
+      else p.destroy();
       return true;
     }
+
+    /* 3. aliens - the laser, which may be held down */
+    var a = this.alienAt(x, y);
+    if (a) {
+      if (this.fireCooldown <= 0) {
+        this.fireCooldown = 0.13;
+        a.damage(this.laserDamage(), 'laser');
+        this.beam(x, this.H, a.x, a.y + a.size() * 0.1, 'laser', '#ff5f4d');
+        this.burst(a.x + rand(-8, 8), a.y + rand(-8, 8), { count: 5, color: '#ffd166', speed: 130, size: 2.6, kind: 'spark' });
+        audio.play('laser');
+      }
+      return true;
+    }
+
+    /* 4. otherwise: feed the tank - exactly one piece per click, never on a
+     *    hold, so collecting a coin can never also spill food. */
+    if (isHold) return true;
+    if (this.paidFoodCount() >= this.maxFood()) {
+      audio.play('denied');
+      this.pop('food limit - upgrade Food Amount', x, y - 14, '#ff9aa2', 15);
+      return true;
+    }
+    this.spawnFood(x, Math.max(this.bounds.t + 6, y), false);
     return true;
   };
 
@@ -390,7 +416,6 @@
   Level.prototype.update = function (dt) {
     var i, list;
     this.time += dt;
-    if (this.feedCooldown > 0) this.feedCooldown -= dt;
     if (this.fireCooldown > 0) this.fireCooldown -= dt;
     if (this.alarm > 0) this.alarm -= dt;
     if (this.tipTimer > 0) this.tipTimer -= dt;

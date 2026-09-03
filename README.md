@@ -9,16 +9,18 @@ one very hungry boss at the bottom.
 
 ## How it plays
 
-- **Click the water** to drop food. Guppies that eat grow through three sizes and drop
-  progressively better coins.
-- **Click coins** to bank them before they fade off the sea floor.
+- **Click the water** to drop food - one piece per click. Guppies that eat grow through three
+  sizes and drop progressively better coins.
+- **Click coins** to bank them before they fade off the sea floor. A coin about to be lost
+  turns red and pulses. Drag across a spill to sweep it up.
 - **Click aliens** to hit them with your laser. Upgrade the laser when they start arriving in pairs.
 - **Buy all three egg pieces** to finish a level. The egg hatches into a pet that joins you for
   the rest of the game — you take three pets on every dive.
 - If every fish dies and you cannot afford another, the tank is lost.
 
-Hold the mouse button to keep feeding or firing. `S` or `Esc` opens the sound panel, `Space`/`P`
-pauses, `M` mutes.
+The cursor tells you what a click will do: a pinching hand over open water, a pointing hand over
+a coin, a reticle over anything shootable. Holding the button keeps the laser firing but never
+sprays food. `S` or `Esc` opens the sound panel, `Space`/`P` pauses, `M` mutes.
 
 ### The food chain
 
@@ -58,6 +60,8 @@ Vanilla JavaScript, no build step, no dependencies, no frameworks.
 - **Autosave**: progress, pets, loadout and an in-progress level snapshot are written to
   `localStorage` every few seconds and at every milestone, so a refresh drops you back into the
   same tank. Total save size is under 1 KB.
+- **Cursors are drawn in code too** - three sprites rendered to canvas at boot and handed to CSS
+  as data URLs, so the pointer art adds no files either.
 - **Responsive**: the canvas fills the window at device pixel ratio. Narrow viewports get a
   two-line HUD and a two-row shop; the layout is driven by the canvas's own box via a
   `ResizeObserver`, so it stays correct in iframes and after orientation changes.

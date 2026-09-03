@@ -16,14 +16,13 @@ html, body {
   display: block;
   width: 100vw;
   height: 100vh;
-  cursor: crosshair;
+  /* the game swaps in its own canvas-drawn cursors at runtime */
+  cursor: default;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
 }
 
-#game.ui-cursor { cursor: pointer; }
-#game.wait-cursor { cursor: progress; }
 
 audio { display: none; }
 

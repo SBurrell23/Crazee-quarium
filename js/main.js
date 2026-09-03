@@ -10,6 +10,8 @@
   var last = 0;
   var pendingDown = false, pendingUp = false;
   var pointer = { x: -1, y: -1, down: false, justDown: false, justUp: false };
+  var cursors = null;
+  var cursorKey = '';
 
   /* The canvas is styled to fill the viewport, so its own box is the most
    * reliable size - it stays correct inside an iframe and when the window
@@ -138,19 +140,41 @@
     }
     ui.end();
 
-    var want = ui.cursor === 'pointer' ? 'ui-cursor' : '';
-    if (canvas.className !== want) canvas.className = want;
+    updateCursor();
 
     window.requestAnimationFrame(frame);
   }
 
+  /* The pointer art tells you what a click will do: a pinching hand over open
+   * water, a pointing hand over a coin, a reticle over anything shootable. */
+  function updateCursor() {
+    var key = 'default';
+    if (ui.cursor === 'pointer') {
+      key = 'pointer';
+    } else if (game.screen === 'game' && game.level && !game.paused &&
+               !ui.settingsOpen && !game.confirm) {
+      var kind = game.level.hoverKind(pointer.x, pointer.y);
+      if (kind === 'target') key = 'target';
+      else if (kind === 'coin') key = 'hand';
+      else if (kind === 'feed') key = 'feed';
+    }
+    if (key === cursorKey) return;
+    cursorKey = key;
+    var css = 'default';
+    if (key === 'pointer') css = 'pointer';
+    else if (cursors && cursors[key]) css = cursors[key];
+    canvas.style.cursor = css;
+  }
+
   function boot() {
     audio.boot();
+    cursors = art.makeCursors();
     resize();
     game = new CQ.Game(canvas, ctx);
     game.pointer = pointer;
     game.resize(W, H);
     CQ.dev.game = game;
+    CQ.dev.cursor = function () { updateCursor(); return cursorKey; };
     window.game = game;
     audio.music('loop');
     makeFavicon();

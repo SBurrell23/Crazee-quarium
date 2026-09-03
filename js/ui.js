@@ -39,7 +39,7 @@
     var minBw = narrow ? 78 : 92;
     var perRow = Math.max(2, Math.floor((W - 8) / (minBw + 8)));
     var rows = n > perRow ? 2 : 1;
-    var shopH = rows === 1 ? clamp(H * 0.13, 76, 116) : clamp(H * 0.2, 118, 168);
+    var shopH = rows === 1 ? clamp(H * 0.112, 66, 98) : clamp(H * 0.175, 104, 146);
     return { hudH: hudH, shopH: shopH, shopRows: rows, narrow: narrow, pad: 12 };
   };
 
@@ -289,11 +289,14 @@
     /* money */
     var coinR = narrow ? 10 : 14;
     var moneyY = narrow ? h * 0.33 : h * 0.5;
+    var moneyStr = util.fmtMoney(level.money);
+    var moneySize = narrow ? Math.min(23, h * 0.3) : Math.min(30, h * 0.42);
     art.drawCoin(ctx, { x: 18 + coinR, y: moneyY, s: coinR, type: 'gold', spin: level.time * 2.2 });
-    art.text(ctx, util.fmtMoney(level.money), 18 + coinR * 2 + 8, moneyY, {
-      size: narrow ? Math.min(23, h * 0.3) : Math.min(30, h * 0.42),
-      fill: '#ffe066', stroke: '#04202f', strokeW: 5, align: 'left'
+    art.text(ctx, moneyStr, 18 + coinR * 2 + 8, moneyY, {
+      size: moneySize, fill: '#ffe066', stroke: '#04202f', strokeW: 5, align: 'left'
     });
+    var foodNow = level.paidFoodCount(), foodMax = level.maxFood();
+    var foodFull = foodNow >= foodMax;
 
     if (narrow) {
       /* two compact lines: money on top, level + counters underneath */
@@ -301,9 +304,14 @@
       art.text(ctx, level.cfg.label + '  ' + level.cfg.name.toUpperCase(), 18, line2, {
         size: Math.min(14, h * 0.19), fill: '#dff1ff', align: 'left', stroke: '#04202f', strokeW: 3
       });
-      art.text(ctx, 'fish ' + level.fishCount() + '/' + level.cfg.fishCap +
-        '   food ' + level.paidFoodCount() + '/' + level.maxFood(), right, line2, {
-          size: Math.min(13, h * 0.18), fill: rgba('#8ff0ff', 0.9), align: 'right', weight: 'normal'
+      var nSize = Math.min(13, h * 0.18);
+      var foodStrN = 'food ' + foodNow + '/' + foodMax;
+      art.text(ctx, foodStrN, right, line2, {
+        size: nSize, fill: foodFull ? '#ff9aa2' : '#ffe066', align: 'right', stroke: '#04202f', strokeW: 3
+      });
+      art.text(ctx, 'fish ' + level.fishCount() + '/' + level.cfg.fishCap,
+        right - art.measure(ctx, foodStrN, nSize) - 14, line2, {
+          size: nSize, fill: rgba('#8ff0ff', 0.9), align: 'right', weight: 'normal'
         });
       if (level.cfg.boss) drawBossBar(ctx, level, right - 118, h * 0.3, 118, 9, 12);
       else drawEggPips(ctx, level, right - 30, h * 0.32, Math.min(12, h * 0.15), 25);
@@ -315,8 +323,27 @@
     art.text(ctx, level.cfg.label + '  ' + level.cfg.name.toUpperCase(), cx, h * 0.36, {
       size: Math.min(21, h * 0.29), fill: '#dff1ff', stroke: '#04202f', strokeW: 4
     });
-    art.text(ctx, data.tanks[level.cfg.tank].name + '   |   fish ' + level.fishCount() + '/' + level.cfg.fishCap, cx, h * 0.72, {
-      size: Math.min(14, h * 0.2), fill: rgba('#8ff0ff', 0.85), weight: 'normal'
+    art.text(ctx, 'click water to feed   |   click coins to collect   |   click aliens to shoot', cx, h * 0.74, {
+      size: Math.min(13, h * 0.185), fill: rgba('#8ff0ff', 0.8), weight: 'normal'
+    });
+
+    /* fish count and a food pill, right of the money */
+    var lx = 18 + coinR * 2 + 8 + art.measure(ctx, moneyStr, moneySize) + 18;
+    var cSize = Math.min(15, h * 0.21);
+    art.text(ctx, 'fish ' + level.fishCount() + '/' + level.cfg.fishCap, lx + 6, h * 0.28, {
+      size: cSize, fill: rgba('#8ff0ff', 0.95), align: 'left', stroke: '#04202f', strokeW: 3, weight: 'normal'
+    });
+    var foodStr = 'FOOD ' + foodNow + '/' + foodMax;
+    var fpw = art.measure(ctx, foodStr, cSize) + 26;
+    art.panel(ctx, lx, h * 0.52, fpw, h * 0.4, {
+      radius: h * 0.2,
+      top: foodFull ? 'rgba(140,28,36,0.95)' : 'rgba(12,60,86,0.9)',
+      bottom: foodFull ? 'rgba(92,16,22,0.96)' : 'rgba(4,28,46,0.92)',
+      gloss: false, shadow: false,
+      strokeColor: foodFull ? 'rgba(255,150,150,0.75)' : 'rgba(140,220,255,0.35)'
+    });
+    art.text(ctx, foodStr, lx + fpw / 2, h * 0.72, {
+      size: cSize, fill: foodFull ? '#ffd9dd' : '#ffe066', stroke: '#04202f', strokeW: 3
     });
 
     if (level.cfg.boss) {
@@ -329,8 +356,8 @@
     /* active pets */
     for (var pi = 0; pi < level.pets.length; pi++) {
       var pd = level.pets[pi].def;
-      var bx2 = 190 + pi * 42;
-      if (bx2 + 40 > cx - 160) break;
+      var bx2 = lx + fpw + 16 + pi * 42;
+      if (bx2 + 40 > cx - 205) break;
       ctx.save();
       art.panel(ctx, bx2, h * 0.16, 36, h * 0.68, {
         radius: 8, top: 'rgba(10,54,78,0.8)', bottom: 'rgba(4,26,42,0.85)',
@@ -347,7 +374,7 @@
   ui.drawShop = function (ctx, game, level) {
     ui.ctx = ctx;
     var W = level.W, H = level.H, m = game.metrics();
-    var h = m.shopH, y = H - h, narrow = m.narrow;
+    var h = m.shopH, y = H - h;
 
     art.panel(ctx, -20, y, W + 40, h + 24, {
       radius: 18, top: 'rgba(6,38,58,0.94)', bottom: 'rgba(3,18,30,0.94)',
@@ -421,15 +448,6 @@
       if (hover && !ui.blocked) ui.tooltip = { item: it, x: bx + bw / 2, y: by - 12 };
     }
 
-    /* readouts above the bar - the narrow HUD carries these instead */
-    if (!narrow) {
-      art.text(ctx, 'food ' + level.paidFoodCount() + '/' + level.maxFood(), 16, y - 14, {
-        size: 13, fill: rgba('#dff1ff', 0.85), align: 'left', stroke: '#04202f', strokeW: 3, weight: 'normal'
-      });
-      art.text(ctx, 'click water to feed  |  click coins to collect  |  click aliens to shoot', W - 16, y - 14, {
-        size: 13, fill: rgba('#dff1ff', 0.6), align: 'right', stroke: '#04202f', strokeW: 3, weight: 'normal'
-      });
-    }
   };
 
   ui.drawTooltip = function (ctx, W) {

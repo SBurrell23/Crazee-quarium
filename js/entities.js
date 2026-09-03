@@ -123,16 +123,24 @@
     this.level.stats.collected += this.value;
   };
   Drop.prototype.draw = function (ctx) {
-    var a = 1;
-    if (this.onFloor) a = clamp(1 - (this.floorTime - (this.def.linger - 1.2)) / 1.2, 0.2, 1);
+    var a = 1, warn = 0;
+    /* A drop that is about to be lost turns red and pulses. */
+    if (this.onFloor) {
+      var left = this.def.linger - this.floorTime;
+      a = clamp(left / 1.2, 0.25, 1);
+      warn = clamp((1.6 - left) / 1.6, 0, 1);
+    }
     if (this.def.rise) {
       var top = this.level.bounds.t;
       a = clamp((this.y - top) / 60, 0.15, 1);
+      warn = clamp(1 - (this.y - top) / 110, 0, 1);
     }
-    art.drawCoin(ctx, { x: this.x, y: this.y, s: this.s, type: this.type, spin: this.spin, alpha: a });
-    /* A floor coin about to expire flashes so the player notices it. */
-    if (this.onFloor && this.floorTime > this.def.linger - 1.0 && Math.sin(this.floorTime * 22) > 0) {
-      art.drawRing(ctx, this.x, this.y, this.s * 1.6, 0.5, '#ffffff', 2);
+    art.drawCoin(ctx, {
+      x: this.x, y: this.y, s: this.s, type: this.type, spin: this.spin, alpha: a, warn: warn
+    });
+    if (warn > 0.05) {
+      var pulse = 0.4 + 0.45 * Math.sin(this.age * 16);
+      art.drawRing(ctx, this.x, this.y, this.s * (1.5 + warn * 0.55), Math.max(0, pulse) * warn, '#ff3b30', 2.4);
     }
   };
 

@@ -1808,6 +1808,13 @@
     } else {
       /* round coin, spinning about its vertical axis */
       var look = coinLooks[type] || coinLooks.gold;
+      if (o.warn) {
+        look = {
+          face: util.mixColor(look.face, '#ff3b30', o.warn * 0.8),
+          edge: util.mixColor(look.edge, '#8e0f08', o.warn * 0.8),
+          sym: look.sym
+        };
+      }
       var sq = 0.22 + 0.78 * Math.abs(Math.cos(o.spin));
       ctx.scale(sq, 1);
       var cg2 = ctx.createRadialGradient(-s * 0.3, -s * 0.35, s * 0.1, 0, 0, s * 1.1);
@@ -1827,6 +1834,18 @@
       ctx.fill();
     }
     ctx.restore();
+    if (o.warn) {
+      /* Shapes with baked-in colours (gems, bars, beetles) cannot be
+       * repalletted, so a red halo carries the warning for them. */
+      var hg = ctx.createRadialGradient(o.x, o.y, s * 0.5, o.x, o.y, s * 2.6);
+      hg.addColorStop(0, rgba('#ff3b30', 0.5 * o.warn));
+      hg.addColorStop(1, rgba('#ff3b30', 0));
+      ctx.save();
+      ctx.fillStyle = hg;
+      circle(ctx, o.x, o.y, s * 2.6);
+      ctx.fill();
+      ctx.restore();
+    }
   }
 
   function drawFood(ctx, o) {
@@ -2391,7 +2410,122 @@
     }
   }
 
+  /* ------------------------------------------------------------- cursors
+   * Drawn with the same code style as everything else and handed to CSS as
+   * data URLs, so there are still no image files in the project.
+   */
+  function cursorSprite(draw, size, hx, hy) {
+    var c = document.createElement('canvas');
+    c.width = size; c.height = size;
+    var x = c.getContext('2d');
+    draw(x);
+    return 'url(' + c.toDataURL('image/png') + ') ' + hx + ' ' + hy + ', auto';
+  }
+
+  var INK = 'rgba(5,24,38,0.9)';
+
+  /* Pinching hand sprinkling flakes - shown over open water. */
+  function drawFeedCursor(x) {
+    function limbs(w, color) {
+      x.strokeStyle = color;
+      x.lineWidth = w;
+      x.lineCap = 'round';
+      x.lineJoin = 'round';
+      x.beginPath(); x.moveTo(8, 8); x.lineTo(17, 18); x.stroke();
+      x.beginPath(); x.moveTo(12, 5); x.lineTo(20, 15); x.stroke();
+    }
+    /* outline pass */
+    limbs(8, INK);
+    x.fillStyle = INK;
+    circle(x, 22, 22, 8.5); x.fill();
+    /* fill pass */
+    limbs(4.2, '#ffffff');
+    x.fillStyle = '#f4fbff';
+    circle(x, 22, 22, 6.4); x.fill();
+    /* flakes falling from the pinch */
+    var flakes = [[4, 15, 2.2], [8, 20, 1.8], [3, 24, 1.5]];
+    for (var i = 0; i < flakes.length; i++) {
+      x.fillStyle = INK;
+      circle(x, flakes[i][0], flakes[i][1], flakes[i][2] + 1.3); x.fill();
+      x.fillStyle = '#ffc46b';
+      circle(x, flakes[i][0], flakes[i][1], flakes[i][2]); x.fill();
+    }
+  }
+
+  /* Pointing hand - shown over a collectable coin. */
+  function drawHandCursor(x) {
+    function limbs(w, color) {
+      x.strokeStyle = color;
+      x.lineWidth = w;
+      x.lineCap = 'round';
+      x.lineJoin = 'round';
+      x.beginPath(); x.moveTo(10, 6); x.lineTo(10, 16); x.stroke();
+      x.beginPath(); x.moveTo(8, 20); x.lineTo(5, 24); x.stroke();
+    }
+    limbs(8.5, INK);
+    x.fillStyle = INK;
+    util.roundRect(x, 5, 13, 17, 16, 6.5); x.fill();
+    limbs(5, '#ffffff');
+    x.fillStyle = '#f4fbff';
+    util.roundRect(x, 7, 15, 13, 12, 5); x.fill();
+    x.strokeStyle = '#ffffff';
+    x.lineWidth = 5.5;
+    x.lineCap = 'round';
+    x.beginPath(); x.moveTo(10, 7); x.lineTo(10, 15); x.stroke();
+    x.strokeStyle = 'rgba(5,24,38,0.4)';
+    x.lineWidth = 1.2;
+    x.beginPath();
+    x.moveTo(13.5, 17); x.lineTo(13.5, 21);
+    x.moveTo(17, 18); x.lineTo(17, 21);
+    x.stroke();
+  }
+
+  /* Reticle - shown over an alien or an incoming shot. */
+  function drawTargetCursor(x) {
+    var c = 18;
+    x.strokeStyle = 'rgba(5,24,38,0.55)';
+    x.lineWidth = 5;
+    circle(x, c, c, 10.5); x.stroke();
+    x.strokeStyle = '#ff5f4d';
+    x.lineWidth = 2.6;
+    circle(x, c, c, 10.5); x.stroke();
+    x.strokeStyle = 'rgba(255,255,255,0.65)';
+    x.lineWidth = 1.2;
+    circle(x, c, c, 6.5); x.stroke();
+    for (var i = 0; i < 4; i++) {
+      var a = (i / 4) * TAU;
+      var dx = Math.cos(a), dy = Math.sin(a);
+      x.strokeStyle = 'rgba(5,24,38,0.55)';
+      x.lineWidth = 5;
+      x.beginPath();
+      x.moveTo(c + dx * 11, c + dy * 11); x.lineTo(c + dx * 16.5, c + dy * 16.5);
+      x.stroke();
+      x.strokeStyle = '#ffe066';
+      x.lineWidth = 2.2;
+      x.beginPath();
+      x.moveTo(c + dx * 11, c + dy * 11); x.lineTo(c + dx * 16.5, c + dy * 16.5);
+      x.stroke();
+    }
+    x.fillStyle = INK;
+    circle(x, c, c, 2.8); x.fill();
+    x.fillStyle = '#ffe066';
+    circle(x, c, c, 1.7); x.fill();
+  }
+
+  function makeCursors() {
+    try {
+      return {
+        feed: cursorSprite(drawFeedCursor, 34, 8, 7),
+        hand: cursorSprite(drawHandCursor, 34, 10, 5),
+        target: cursorSprite(drawTargetCursor, 36, 18, 18)
+      };
+    } catch (e) {
+      return { feed: 'crosshair', hand: 'pointer', target: 'crosshair' };
+    }
+  }
+
   CQ.art = {
+    makeCursors: makeCursors,
     FONT: FONT,
     themes: themes,
     text: text, measure: measure, circle: circle, fillCircle: fillCircle, ellipse: ellipse,
