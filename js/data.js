@@ -180,7 +180,7 @@
     { key: 'bulwark', name: 'Bulwark', shape: 'turtle',   c1: '#5f9e6e', c2: '#c8a24c', acc: 'none',       size: 68,
       ability: { kind: 'shield', interval: 2.4, knock: 260 }, desc: 'Rams aliens away from your fish.' },
     { key: 'wizzy',   name: 'Wizzy',   shape: 'seahorse', c1: '#a86ad6', c2: '#ffe066', acc: 'hat',        size: 62,
-      ability: { kind: 'upgradeCoin', interval: 4.5 }, desc: 'Transmutes a loose coin into the next tier up.' },
+      ability: { kind: 'upgradeCoin', interval: 4.5 }, desc: 'Transmutes a loose coin one tier up, as far as a diamond.' },
     { key: 'shrap',   name: 'Shrap',   shape: 'puffer',   c1: '#8d99a4', c2: '#e7eef4', acc: 'spikes',     size: 58,
       ability: { kind: 'spikes', interval: 4.5, count: 3, damage: 2 }, desc: 'Fires a volley of three spikes at aliens.' },
     { key: 'oracle',  name: 'Oracle',  shape: 'jelly',    c1: '#8ff0ff', c2: '#2f8fa8', acc: 'antenna',    size: 60,

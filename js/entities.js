@@ -638,7 +638,11 @@
         break;
       case 'upgradeCoin':
         if (this.timer <= 0) {
-          var chain = { bronze: 'silver', silver: 'gold', gold: 'diamond', star: 'gold', beetle: 'pearl' };
+          /* Coins only, and a diamond is the ceiling. Beetles and stars are
+           * food for crunchers and starcatchers - transmuting those short
+           * circuited their whole food chain (a beetle straight to a pearl
+           * paid more than the fish that eat them). */
+          var chain = { bronze: 'silver', silver: 'gold', gold: 'diamond' };
           var cand = null;
           for (var u = 0; u < lvl.drops.length; u++) {
             var d2 = lvl.drops[u];
