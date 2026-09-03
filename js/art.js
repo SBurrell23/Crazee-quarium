@@ -2502,10 +2502,13 @@
     }
   }
 
-  /* The familiar click hand, shown over a collectable coin. Shapes are stroked
-   * then filled one by one: util.roundRect starts a fresh path, so it cannot be
-   * used to accumulate one, and separate fills avoid winding holes where the
-   * finger, fist and thumb overlap. */
+  /* The standard link pointer, shown over a collectable coin: index finger at
+   * the LEFT of the hand with the three folded fingers bumping along the top to
+   * its right, and the thumb out to the side. (Centring the finger on the fist
+   * makes it read as a rather different gesture.)
+   * Shapes are stroked then filled one at a time - util.roundRect begins a new
+   * path, so it cannot accumulate one, and per-shape fills avoid winding holes
+   * where the parts overlap. */
   function drawHandCursor(x) {
     function rr(rx, ry, rw, rh, r) {
       x.moveTo(rx + r, ry);
@@ -2516,11 +2519,12 @@
       x.closePath();
     }
     function eachShape(paint) {
-      x.beginPath(); rr(6.5, 12, 14, 15, 4.5); paint();          /* fist */
-      x.beginPath(); rr(8.6, 2.5, 5.4, 12.5, 2.7); paint();      /* raised finger */
-      x.beginPath();                                             /* thumb */
-      x.moveTo(7, 16.6); x.lineTo(3.4, 20.3); x.lineTo(5.6, 25.3); x.lineTo(9.4, 23.5);
-      x.closePath(); paint();
+      x.beginPath(); rr(7.8, 2.0, 5.2, 13.5, 2.6); paint();   /* raised index, far left */
+      x.beginPath(); rr(12.8, 10.4, 4.4, 6.5, 2.2); paint();  /* folded middle */
+      x.beginPath(); rr(16.6, 11.4, 4.4, 5.8, 2.2); paint();  /* folded ring */
+      x.beginPath(); rr(20.2, 12.8, 4.0, 5.0, 2.0); paint();  /* folded little */
+      x.beginPath(); rr(7.8, 14.0, 16.4, 12.6, 4.0); paint(); /* palm */
+      x.beginPath(); rr(3.4, 16.2, 5.8, 7.6, 2.9); paint();   /* thumb */
     }
     x.lineJoin = 'round';
     x.lineCap = 'round';
@@ -2529,12 +2533,13 @@
     eachShape(function () { x.stroke(); });
     x.fillStyle = '#ffffff';
     eachShape(function () { x.fill(); });
-    /* folded knuckles */
-    x.strokeStyle = 'rgba(5,24,38,0.45)';
-    x.lineWidth = 1.3;
+    /* creases between the folded fingers */
+    x.strokeStyle = 'rgba(5,24,38,0.42)';
+    x.lineWidth = 1.2;
     x.beginPath();
-    x.moveTo(14.4, 14.8); x.lineTo(14.4, 19.8);
-    x.moveTo(17.6, 15.4); x.lineTo(17.6, 19.8);
+    x.moveTo(12.9, 12.4); x.lineTo(12.9, 18.6);
+    x.moveTo(16.7, 13.2); x.lineTo(16.7, 18.6);
+    x.moveTo(20.3, 14.4); x.lineTo(20.3, 18.6);
     x.stroke();
   }
 
@@ -2574,7 +2579,7 @@
     try {
       return {
         feed: cursorSprite(drawFeedCursor, 30, 14, 14),
-        hand: cursorSprite(drawHandCursor, 30, 11, 3),
+        hand: cursorSprite(drawHandCursor, 30, 10, 3),
         target: cursorSprite(drawTargetCursor, 36, 18, 18)
       };
     } catch (e) {

@@ -14,14 +14,14 @@ one very hungry boss at the bottom.
 - **Click coins** to bank them before they fade off the sea floor. A coin about to be lost
   turns red and pulses. Drag across a spill to sweep it up.
 - **Click aliens** to hit them with your laser, which fires from an emitter above the tank.
-  Upgrade it when they start arriving in pairs.
+  One hit per click, so upgrade it when they start arriving in pairs.
 - **Buy all three egg pieces** to finish a level. The egg hatches into a pet that joins you for
   the rest of the game — you take three pets on every dive.
 - If every fish dies and you cannot afford another, the tank is lost.
 
 The cursor tells you what a click will do: a scatter of food over open water, a click hand over a
-coin, a reticle over anything shootable. Holding the button keeps the laser firing but never
-sprays food.
+coin, a reticle over anything shootable. Every alien hit costs a separate click - holding the
+button down does nothing, so the laser upgrades earn their price.
 
 `I` (or the info button) opens a how-to-play panel with tips and your progress through the
 ladder; `S` or `Esc` opens the sound panel; `Space`/`P` pauses; `M` mutes.

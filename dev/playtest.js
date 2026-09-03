@@ -36,21 +36,27 @@ window.CQTEST = (function () {
       d.collect(false);
     }
 
-    /* laser: skip the golem (immune) and the squid while it is passive */
+    /* Combat on a human click budget: one click every 0.2s (a brisk five a
+     * second), spent on the most urgent thing. Alien damage is click-only, so
+     * this is what the difficulty actually feels like. */
     lv.botFire = (lv.botFire || 0) - dt;
     if (lv.botFire <= 0) {
-      for (i = 0; i < lv.aliens.length; i++) {
-        var a = lv.aliens[i];
-        if (a.dead || a.dying || a.def.ai === 'golem' || a.passive) continue;
-        a.damage(lv.laserDamage(), 'laser');
-        lv.botFire = 0.16;
-        break;
+      var clicked = false;
+      /* a shot already in flight is the priority */
+      for (i = 0; i < lv.projectiles.length && !clicked; i++) {
+        var pr = lv.projectiles[i];
+        if (pr.dead || pr.friendly || pr.deflected || pr.delay > 0 || pr.age < 0.4) continue;
+        lv.pointerAction(pr.x, pr.y, false);
+        clicked = true;
       }
-    }
-    for (i = 0; i < lv.projectiles.length; i++) {
-      var p = lv.projectiles[i];
-      if (p.dead || p.friendly || p.deflected || p.delay > 0 || p.age < 0.5) continue;
-      if (p.kind === 'orb') p.deflect(); else p.destroy();
+      for (i = 0; i < lv.aliens.length && !clicked; i++) {
+        var al = lv.aliens[i];
+        if (al.dead || al.dying || al.def.ai === 'golem' || al.passive) continue;
+        lv.pointerAction(al.x, al.y, false);
+        clicked = true;
+      }
+      if (clicked) lv.botFire = 0.2;
+      else lv.botFire = 0.05;
     }
 
     /* feed whoever needs it most */

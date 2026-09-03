@@ -304,7 +304,7 @@
     lvl({
       tank: 1, num: 5, name: 'Shelf Keeper', startMoney: 680, starGuppies: 0.6,
       startFish: [{ species: 'guppy', count: 4, stage: 1 }, { species: 'starcatcher', count: 1, stage: 0 }],
-      shop: ['food', 'maxfood', 'laser', 'guppy', 'starcatcher', 'carnivore'], eggPrice: 1450,
+      shop: ['food', 'maxfood', 'laser', 'guppy', 'starcatcher', 'carnivore'], eggPrice: 1300,
       aliens: ['maulrog', 'bomber', 'thief', 'gnasher'], alienStart: 36, alienGap: [26, 42], alienHp: 1.3, fishCap: 28,
       tip: 'Upgrade food early: better food means fewer clicks per fish.'
     }),

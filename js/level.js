@@ -386,11 +386,12 @@
       return true;
     }
 
-    /* 3. aliens - the laser, which may be held down */
+    /* 3. aliens - one hit per click. Holding the button does nothing, so
+     *    driving an alien off is real work and the laser upgrades matter. */
     var a = this.alienAt(x, y);
     if (a) {
-      if (this.fireCooldown <= 0) {
-        this.fireCooldown = 0.13;
+      if (!isHold && this.fireCooldown <= 0) {
+        this.fireCooldown = 0.05;
         a.damage(this.laserDamage(), 'laser');
         /* the laser fires from an emitter above the tank, not from the shop bar */
         this.beam(this.W / 2, 0, a.x, a.y + a.size() * 0.1, 'laser', '#ff5f4d');

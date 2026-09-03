@@ -231,7 +231,7 @@
   var INFO_ROWS = [
     ['food', 'Click the water to drop one piece of food. Fed fish grow bigger and pay better.'],
     ['fish', 'Click a coin to bank it. A coin turns red just before it is lost.'],
-    ['laser', 'Click an alien over and over to blast it. Hold the button to keep firing.'],
+    ['laser', 'Click an alien over and over to blast it. One hit per click, so upgrade the laser.'],
     ['egg', 'Buy all three egg pieces to finish a level and hatch a new pet.'],
     ['heart', 'Three pets dive with you. Every pet you hatch works for free, forever.'],
     ['skull', 'Lose every fish with no cash left for another and the tank is lost.']
